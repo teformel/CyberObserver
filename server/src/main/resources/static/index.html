@@ -1,20 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>CYBER OBSERVER // GOD VIEW</title>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #000; color: #0f0; font-family: 'Courier New', monospace; }
-        #info { position: absolute; top: 10px; left: 10px; z-index: 100; pointer-events: none; }
-        .hud-panel { 
-            background: rgba(0, 20, 0, 0.7); 
-            border: 1px solid #0f0; 
-            padding: 10px; 
-            margin-bottom: 10px;
-            backdrop-filter: blur(5px);
-        }
-    </style>
-    <!-- Import Three.js from CDN -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Import Map for Modules -->
     <script type="importmap">
       {
         "imports": {
@@ -24,62 +16,144 @@
       }
     </script>
 </head>
+
 <body>
-    <div id="info">
-        <div class="hud-panel">
-            <h3>SYSTEM STATUS</h3>
-            <div id="connection-status">DISCONNECTED</div>
+    <!-- 3D Scene Container -->
+    <div id="canvas-container" style="position: absolute; top:0; left:0; width:100%; height:100%;"></div>
+
+    <!-- Scanline Overlay -->
+    <div class="scanlines"></div>
+
+    <!-- HUD Layer -->
+    <div id="ui-layer">
+        <!-- Top Bar -->
+        <div class="hud-panel top-bar">
+            <div class="title-box">
+                <h1 data-i18n="title">赛博视奸 // 上帝视角</h1>
+                <small style="color:var(--secondary-color)" data-i18n="subtitle">系统 ALPHA // 监控中</small>
+            </div>
+            <div class="status-indicator">
+                <span id="server-status-text" data-i18n="status_offline">离线</span>
+                <div id="server-status-dot" class="status-dot"></div>
+                <button id="lang-toggle"
+                    style="background:none; border:1px solid var(--primary-color); color:var(--primary-color); font-family:var(--font-mono); margin-left:10px; cursor:pointer;">[EN/CN]</button>
+            </div>
         </div>
-        <div class="hud-panel" id="device-list">
-            Waiting for signals...
+
+        <!-- Left Panel: Device List -->
+        <div class="hud-panel" style="position: absolute; top: 120px; left: 20px;">
+            <div class="device-header">
+                <span data-i18n="connected_devices">已连接设备</span>
+                <span id="device-count">0</span>
+            </div>
+            <div id="device-list-container">
+                <div style="color: #666; font-style: italic;" data-i18n="scanning">正在扫描网络...</div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Logs (Placeholder) -->
+        <div class="hud-panel"
+            style="position: absolute; bottom: 20px; right: 20px; max-width: 400px; text-align: right;">
+            <div class="device-header" data-i18n="system_logs">系统日志</div>
+            <div id="log-container" style="font-size: 10px; color: #aaa;">
+                > System initialized.<br>
+                > Waiting for uplink...
+            </div>
         </div>
     </div>
 
+    <!-- Main Logic -->
     <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { initScene, updateDeviceState } from './js/scene.js';
 
-        // --- 1. Scene Setup ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050510);
-        scene.fog = new THREE.FogExp2(0x050510, 0.035);
+        // --- i18n System ---
+        const translations = {
+            CN: {
+                title: "赛博视奸 // 上帝视角",
+                subtitle: "系统 ALPHA // 监控中",
+                status_online: "在线",
+                status_offline: "离线",
+                connected_devices: "已连接设备",
+                scanning: "正在扫描网络...",
+                system_logs: "系统日志",
+                battery: "电量",
+                cpu: "处理器",
+                mem: "内存",
+                app: "应用",
+                log_uplink: "链路已建立。",
+                log_lost: "连接丢失。",
+                log_new_device: "检测到新设备："
+            },
+            EN: {
+                title: "CYBER OBSERVER // GOD VIEW",
+                subtitle: "SYSTEM ALPHA // MONITORING",
+                status_online: "ONLINE",
+                status_offline: "OFFLINE",
+                connected_devices: "CONNECTED DEVICES",
+                scanning: "Scanning network...",
+                system_logs: "SYSTEM LOGS",
+                battery: "BATTERY",
+                cpu: "CPU",
+                mem: "MEM",
+                app: "APP",
+                log_uplink: "Uplink established.",
+                log_lost: "Connection lost.",
+                log_new_device: "New Device Detected:"
+            }
+        };
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2, 5);
+        let currentLang = 'CN';
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        function setLanguage(lang) {
+            currentLang = lang;
+            const t = translations[lang];
 
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
+            // Update static elements
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) el.innerText = t[key];
+            });
 
-        // Grid
-        const gridHelper = new THREE.GridHelper(20, 20, 0x00ff00, 0x004400);
-        scene.add(gridHelper);
+            // Update Status Text manually due to ID
+            const statusText = document.getElementById('server-status-text');
+            if (statusText.innerText === translations['EN'].status_online || statusText.innerText === translations['CN'].status_online) {
+                statusText.innerText = t.status_online;
+            } else {
+                statusText.innerText = t.status_offline;
+            }
 
-        // Light
-        const light = new THREE.PointLight(0x00ff00, 1, 100);
-        light.position.set(2, 5, 2);
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x404040));
+            // Re-render device cards if needed (simplified: next update will catch it)
+        }
 
-        // Placeholder for Phone
-        const phoneGeo = new THREE.BoxGeometry(0.7, 1.4, 0.1);
-        const phoneMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: false });
-        const phoneMesh = new THREE.Mesh(phoneGeo, phoneMat);
-        phoneMesh.position.y = 1;
-        scene.add(phoneMesh);
+        document.getElementById('lang-toggle').onclick = () => {
+            setLanguage(currentLang === 'CN' ? 'EN' : 'CN');
+        };
 
-        // --- 2. WebSocket Logic ---
+
+        // 1. Initialize 3D
+        initScene(document.getElementById('canvas-container'));
+
+        // 2. Log Utils
+        const logContainer = document.getElementById('log-container');
+        function sysLog(msgKey, param = "") {
+            const t = translations[currentLang];
+            const msg = t[msgKey] ? t[msgKey] + " " + param : msgKey + " " + param;
+            logContainer.innerHTML += `<br>> ${msg}`;
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // 3. WebSocket Logic
         const ws = new WebSocket("ws://" + window.location.host + "/ws");
-        
+        const statusDot = document.getElementById('server-status-dot');
+        const statusText = document.getElementById('server-status-text');
+
         ws.onopen = () => {
-            document.getElementById("connection-status").innerText = "CONNECTED // FEED ACTIVE";
-            document.getElementById("connection-status").style.color = "#0f0";
-            
-            // Auth as Display
-            const auth = {
+            statusText.innerText = translations[currentLang].status_online;
+            statusDot.classList.add("active");
+            sysLog("log_uplink");
+
+            // Auth
+            ws.send(JSON.stringify({
                 type: "AUTH",
                 payloadJson: JSON.stringify({
                     deviceId: "WEB_DISPLAY_01",
@@ -87,8 +161,14 @@
                     type: "SERVER",
                     authKey: "MASTER_KEY"
                 })
-            };
-            ws.send(JSON.stringify(auth));
+            }));
+        };
+
+        ws.onclose = () => {
+            statusText.innerText = translations[currentLang].status_offline;
+            statusText.style.color = "var(--alert-color)";
+            statusDot.classList.remove("active");
+            sysLog("log_lost");
         };
 
         ws.onmessage = (event) => {
@@ -99,41 +179,69 @@
                     handleStatusUpdate(status);
                 }
             } catch (e) {
-                console.error("Parse Error", e);
+                console.error(e);
             }
         };
 
         function handleStatusUpdate(status) {
-            const list = document.getElementById("device-list");
-            list.innerHTML = `
-                <div>ID: ${status.deviceId}</div>
-                <div>BAT: ${(status.batteryLevel * 100).toFixed(0)}%</div>
-                <div>APP: ${status.activeApp}</div>
+            // Update 3D
+            updateDeviceState(status);
+
+            // Update UI (Simple DOM manipulation for demo)
+            updateDeviceCard(status);
+        }
+
+        function updateDeviceCard(status) {
+            const container = document.getElementById('device-list-container');
+            let card = document.getElementById(`card-${status.deviceId}`);
+            const t = translations[currentLang];
+
+            // Calculate bars
+            const cpuPercent = (status.cpuLoad * 100).toFixed(1);
+            const memPercent = (status.memoryUsage * 100).toFixed(1);
+
+            const html = `
+                <div class="device-header">
+                    <span>${status.deviceId}</span>
+                    <span class="blink">ACV</span>
+                </div>
+                <div class="metric-row">
+                    <span>${t.battery}</span>
+                    <span>${(status.batteryLevel * 100).toFixed(0)}%</span>
+                </div>
+                <div class="metric-row">
+                    <span>${t.cpu}</span>
+                    <span>${cpuPercent}%</span>
+                </div>
+                <div class="bar-container"><div class="bar-fill" style="width: ${cpuPercent}%"></div></div>
+                <div class="metric-row" style="margin-top:5px;">
+                    <span>${t.mem}</span>
+                    <span>${memPercent}%</span>
+                </div>
+                <div class="bar-container"><div class="bar-fill" style="width: ${memPercent}%"></div></div>
+                <div class="metric-row" style="margin-top:5px; color: #888;">
+                    <span>${t.app}: ${status.activeApp.substring(0, 20)}...</span>
+                </div>
             `;
 
-            if (status.sensorData) {
-                // Apply rotation
-                const q = status.sensorData;
-                if (q.qW !== undefined) {
-                    const quat = new THREE.Quaternion(q.qX, q.qY, q.qZ, q.qW);
-                    phoneMesh.setRotationFromQuaternion(quat);
-                }
+            if (!card) {
+                card = document.createElement('div');
+                card.id = `card-${status.deviceId}`;
+                card.className = "device-card";
+                container.appendChild(card);
+
+                // Update Count
+                document.getElementById('device-count').innerText = container.children.length;
+                sysLog("log_new_device", status.deviceId);
+
+                // Remove placeholder
+                const placeholder = Array.from(container.children).find(c => c.getAttribute('data-i18n') === 'scanning');
+                if (placeholder) placeholder.remove();
             }
-        }
 
-        // --- 3. Loop ---
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
+            card.innerHTML = html;
         }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
+
 </html>

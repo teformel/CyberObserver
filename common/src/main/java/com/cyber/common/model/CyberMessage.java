@@ -14,11 +14,16 @@ public class CyberMessage {
     private Type type;
     private String payloadJson; // Serialized inner object (ID, Status, or Cmd)
 
+    public CyberMessage() {}
+
     public CyberMessage(Type type, String payloadJson) {
         this.type = type;
         this.payloadJson = payloadJson;
     }
 
     public Type getType() { return type; }
+    public void setType(Type type) { this.type = type; }
+
     public String getPayloadJson() { return payloadJson; }
+    public void setPayloadJson(String payloadJson) { this.payloadJson = payloadJson; }
 }

@@ -35,18 +35,30 @@ public class CyberSocketHandler extends TextWebSocketHandler {
         System.out.println("Closed Connection: " + session.getId());
     }
 
+    private static final int MAX_MSG_SIZE = 1024 * 64; // 64KB
+
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
         
+        // 1. Security: Size Limit
+        if (payload.length() > MAX_MSG_SIZE) {
+            session.close(CloseStatus.POLICY_VIOLATION);
+            return;
+        }
+
         try {
-            // Basic minimal parsing to check type - real implementation might be more robust
             CyberMessage msg = gson.fromJson(payload, CyberMessage.class);
+            if (msg == null || msg.getType() == null) return;
             
             if (msg.getType() == CyberMessage.Type.AUTH) {
                 handleAuth(session, msg.getPayloadJson());
             } else if (msg.getType() == CyberMessage.Type.STATUS_UPDATE) {
-                // Broadcast status to everyone (Simple V1)
+                // 2. Security: Ensure authenticated before broadcasting
+                if (!deviceMap.containsKey(session.getId())) {
+                    // Fail silently or close
+                    return;
+                }
                 broadcast(payload);
             }
         } catch (Exception e) {
@@ -55,9 +67,26 @@ public class CyberSocketHandler extends TextWebSocketHandler {
     }
 
     private void handleAuth(WebSocketSession session, String json) {
-        DeviceIdentity identity = gson.fromJson(json, DeviceIdentity.class);
-        deviceMap.put(session.getId(), identity);
-        System.out.println("Device Authenticated: " + identity.getName() + " [" + identity.getType() + "]");
+        if (json == null || json.isEmpty()) return;
+        
+        try {
+            DeviceIdentity identity = gson.fromJson(json, DeviceIdentity.class);
+            
+            // 3. Security: Input Validation
+            if (!isValidId(identity.getDeviceId())) {
+                System.err.println("Invalid Device ID: " + identity.getDeviceId());
+                session.close(CloseStatus.BAD_DATA);
+                return;
+            }
+            
+            // 4. Security: sanitize name
+            identity.setName(sanitize(identity.getName()));
+
+            deviceMap.put(session.getId(), identity);
+            System.out.println("Device Authenticated: " + identity.getName() + " [" + identity.getType() + "]");
+        } catch (Exception e) {
+             System.err.println("Auth Error: " + e.getMessage());
+        }
     }
 
     private void broadcast(String msg) {
@@ -70,5 +99,16 @@ public class CyberSocketHandler extends TextWebSocketHandler {
                 }
             }
         }
+    }
+
+    private boolean isValidId(String id) {
+        // Alphanumeric, underscores, hyphens only. Length 1-50.
+        return id != null && id.matches("^[a-zA-Z0-9_-]{1,50}$");
+    }
+
+    private String sanitize(String input) {
+        if (input == null) return "";
+        // Remove HTML tags / scripts
+        return input.replaceAll("<[^>]*>", "").trim();
     }
 }

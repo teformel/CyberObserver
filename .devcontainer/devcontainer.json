@@ -1,0 +1,41 @@
+{
+    "name": "CyberMonitor Dev Env",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspace",
+    // 这里的设置会应用到容器内的 VS Code
+    "customizations": {
+        "vscode": {
+            "settings": {
+                // 设置 Java 版本
+                "java.configuration.updateBuildConfiguration": "automatic",
+                "java.home": "/usr/local/sdkman/candidates/java/current",
+                // 优化 Maven 设置
+                "maven.terminal.useJavaHome": true,
+                // 针对你的“Web3D”需求，开启文件自动保存，方便热加载
+                "files.autoSave": "afterDelay"
+            },
+            // 自动为你安装必要的开发插件
+            "extensions": [
+                "vscjava.vscode-java-pack", // Java 核心全家桶 (Maven, Debugger, Test)
+                "gabrielbb.vscode-lombok", // Lombok 支持 (Java 开发必备，减少样板代码)
+                "Pivotal.vscode-spring-boot", // Spring Boot 插件
+                "vscjava.vscode-spring-initializr", // 快速创建 Spring Boot 项目
+                "esbenp.prettier-vscode", // 前端代码美化 (为了你的 Three.js 代码整洁)
+                "dbaeumer.vscode-eslint" // JS 语法检查
+            ]
+        }
+    },
+    // 端口转发：让宿主机的浏览器能访问容器里的服务
+    // 8080: Spring Boot 默认端口
+    // 5005: Java 远程调试端口
+    "forwardPorts": [
+        8080,
+        5005
+    ],
+    // 容器创建后执行的命令
+    // 这里我们更新一下包管理器，并安装 nodejs (前端构建可能需要，即使你用 JSP，管理 Three.js 库也建议用 npm)
+    "postCreateCommand": "sudo apt-get update && sudo apt-get install -y nodejs npm",
+    // 也就是使用 non-root 用户，提升安全性，避免文件权限问题
+    "remoteUser": "vscode"
+}

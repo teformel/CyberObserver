@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    # 使用微软官方优化的 Java 21 镜像 (JDK 21 是目前的 LTS，性能最好，适合新项目)
+    image: mcr.microsoft.com/devcontainers/java:1-21-bullseye
+    volumes:
+      # 将当前项目根目录挂载到容器内的 /workspace
+      - ../:/workspace:cached
+    
+    # 保持容器运行
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    
+    # 网络配置
+    # network_mode: service:db # 如果未来启用 db 服务，允许直接访问 localhost
+
+    # 如果你需要从容器内访问宿主机的服务（比如测试宿主机的某个端口）
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # --- 预留位置：未来如果你需要数据库或消息队列，解开下面注释即可 ---
+  # db:
+  #   image: postgres:latest
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_PASSWORD: cyberpassword
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  
+  # redis:
+  #   image: redis:alpine
+  #   restart: unless-stopped
+
+# volumes:
+#   postgres-data:

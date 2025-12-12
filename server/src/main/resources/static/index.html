@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CYBER OBSERVER // GOD VIEW</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; color: #0f0; font-family: 'Courier New', monospace; }
+        #info { position: absolute; top: 10px; left: 10px; z-index: 100; pointer-events: none; }
+        .hud-panel { 
+            background: rgba(0, 20, 0, 0.7); 
+            border: 1px solid #0f0; 
+            padding: 10px; 
+            margin-bottom: 10px;
+            backdrop-filter: blur(5px);
+        }
+    </style>
+    <!-- Import Three.js from CDN -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="info">
+        <div class="hud-panel">
+            <h3>SYSTEM STATUS</h3>
+            <div id="connection-status">DISCONNECTED</div>
+        </div>
+        <div class="hud-panel" id="device-list">
+            Waiting for signals...
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- 1. Scene Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050510);
+        scene.fog = new THREE.FogExp2(0x050510, 0.035);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Grid
+        const gridHelper = new THREE.GridHelper(20, 20, 0x00ff00, 0x004400);
+        scene.add(gridHelper);
+
+        // Light
+        const light = new THREE.PointLight(0x00ff00, 1, 100);
+        light.position.set(2, 5, 2);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        // Placeholder for Phone
+        const phoneGeo = new THREE.BoxGeometry(0.7, 1.4, 0.1);
+        const phoneMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: false });
+        const phoneMesh = new THREE.Mesh(phoneGeo, phoneMat);
+        phoneMesh.position.y = 1;
+        scene.add(phoneMesh);
+
+        // --- 2. WebSocket Logic ---
+        const ws = new WebSocket("ws://" + window.location.host + "/ws");
+        
+        ws.onopen = () => {
+            document.getElementById("connection-status").innerText = "CONNECTED // FEED ACTIVE";
+            document.getElementById("connection-status").style.color = "#0f0";
+            
+            // Auth as Display
+            const auth = {
+                type: "AUTH",
+                payloadJson: JSON.stringify({
+                    deviceId: "WEB_DISPLAY_01",
+                    name: "GOD_VIEW",
+                    type: "SERVER",
+                    authKey: "MASTER_KEY"
+                })
+            };
+            ws.send(JSON.stringify(auth));
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.type === "STATUS_UPDATE") {
+                    const status = JSON.parse(msg.payloadJson);
+                    handleStatusUpdate(status);
+                }
+            } catch (e) {
+                console.error("Parse Error", e);
+            }
+        };
+
+        function handleStatusUpdate(status) {
+            const list = document.getElementById("device-list");
+            list.innerHTML = `
+                <div>ID: ${status.deviceId}</div>
+                <div>BAT: ${(status.batteryLevel * 100).toFixed(0)}%</div>
+                <div>APP: ${status.activeApp}</div>
+            `;
+
+            if (status.sensorData) {
+                // Apply rotation
+                const q = status.sensorData;
+                if (q.qW !== undefined) {
+                    const quat = new THREE.Quaternion(q.qX, q.qY, q.qZ, q.qW);
+                    phoneMesh.setRotationFromQuaternion(quat);
+                }
+            }
+        }
+
+        // --- 3. Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

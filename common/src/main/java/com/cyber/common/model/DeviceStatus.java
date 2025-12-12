@@ -47,4 +47,7 @@ public class DeviceStatus {
     
     public SensorData getSensorData() { return sensorData; }
     public void setSensorData(SensorData sensorData) { this.sensorData = sensorData; }
+
+    public Map<String, String> getExtras() { return extras; }
+    public void setExtras(Map<String, String> extras) { this.extras = extras; }
 }

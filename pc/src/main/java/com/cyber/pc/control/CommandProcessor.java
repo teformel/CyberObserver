@@ -25,6 +25,14 @@ public class CommandProcessor {
             system.beep();
         } else if ("LOCK".equalsIgnoreCase(action)) {
             system.lockScreen();
+        } else if (action.startsWith("KILL:")) {
+            String processName = action.substring(5).trim();
+            if (isSafeToKill(processName)) {
+                logger.warn("AUDIT: Executing KILL on process '{}'", processName);
+                killProcess(processName);
+            } else {
+                logger.warn("AUDIT: BLOCKED KILL attempt on protected process '{}'", processName);
+            }
         } else if (action.startsWith("URL:")) {
             String url = action.substring(4).trim();
             if (isValidUrl(url)) {
@@ -35,6 +43,25 @@ public class CommandProcessor {
         } else {
              logger.warn("Unknown Command: {}", action);
         }
+    }
+
+    private boolean isSafeToKill(String process) {
+        // Blacklist critical system processes
+        String[] protectedProcs = {"system", "svchost", "csrss", "winlogon", "explorer", "java", "kernel"};
+        String target = process.toLowerCase();
+        
+        // 1. Basic sanity check (alphanumeric + dot/dash/underscore)
+        if (!target.matches("^[a-zA-Z0-9._-]+$")) return false;
+
+        // 2. Blacklist check
+        for (String p : protectedProcs) {
+            if (target.contains(p)) return false;
+        }
+        return true;
+    }
+
+    private void killProcess(String processName) {
+        system.killProcess(processName);
     }
 
     private boolean isValidUrl(String url) {

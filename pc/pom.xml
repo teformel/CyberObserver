@@ -25,16 +25,21 @@
         <version>6.4.10</version>
     </dependency>
 
-    <!-- JNA for Native Access -->
+    <!-- JNA for Native Access (Active Window) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
         <groupId>net.java.dev.jna</groupId>
         <artifactId>jna</artifactId>
-        <version>5.14.0</version>
+        <version>5.13.0</version>
     </dependency>
     <dependency>
         <groupId>net.java.dev.jna</groupId>
         <artifactId>jna-platform</artifactId>
-        <version>5.14.0</version>
+        <version>5.13.0</version>
     </dependency>
 
     <!-- Java WebSocket Client -->

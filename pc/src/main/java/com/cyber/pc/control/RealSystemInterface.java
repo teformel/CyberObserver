@@ -47,4 +47,19 @@ public class RealSystemInterface implements SystemInterface {
              logger.warn("Desktop API not supported");
         }
     }
+
+    @Override
+    public void killProcess(String processName) {
+        try {
+            String os = System.getProperty("os.name").toLowerCase();
+            logger.warn("OS Execution: KILL " + processName);
+            if (os.contains("win")) {
+                Runtime.getRuntime().exec("taskkill /F /IM " + processName + ".exe");
+            } else {
+                Runtime.getRuntime().exec("pkill -9 -f " + processName);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to kill process: " + processName, e);
+        }
+    }
 }

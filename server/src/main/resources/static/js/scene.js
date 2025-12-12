@@ -66,71 +66,157 @@ function addEnvironment() {
     scene.add(dirLight);
 }
 
-function getOrCreateDeviceMesh(deviceId, type) {
-    if (deviceMeshes[deviceId]) return deviceMeshes[deviceId];
+// --- Avatar System ---
 
-    // Create Mesh based on type
-    let geometry, material;
+// Helper to create limb
+function createLimb(w, h, d, color) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mat = new THREE.MeshStandardMaterial({
+        color: color,
+        roughness: 0.2,
+        metalness: 0.8,
+        emissive: 0x001111
+    });
+    return new THREE.Mesh(geo, mat);
+}
 
-    if (type && type.includes('MOBILE')) {
-        // Phone Shape
-        geometry = new THREE.BoxGeometry(0.7, 1.4, 0.1);
-        material = new THREE.MeshStandardMaterial({
-            color: 0x00ffff,
-            emissive: 0x004444,
-            roughness: 0.2,
-            metalness: 0.8
-        });
-    } else {
-        // PC/Server Shape (Cube)
-        geometry = new THREE.BoxGeometry(1, 1, 1);
-        material = new THREE.MeshStandardMaterial({
-            color: 0x00ff00,
-            emissive: 0x004400,
-            wireframe: true
-        });
-    }
+function createCyberAvatar() {
+    const root = new THREE.Group();
+    root.userData.isAvatar = true;
 
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.y = 1; // Float above grid
-    scene.add(mesh);
+    const cyberColor = 0x00ffff;
 
-    // Add Label (Sprite) - Simplified for now
+    // 1. Torso
+    const torso = createLimb(0.5, 0.7, 0.25, cyberColor);
+    torso.position.y = 1.0; // Center of torso
+    torso.name = "torso";
+    root.add(torso);
 
-    deviceMeshes[deviceId] = mesh;
-    return mesh;
+    // 2. Head
+    const head = createLimb(0.25, 0.3, 0.3, cyberColor);
+    head.position.set(0, 0.55, 0); // Relative to torso
+    head.name = "head";
+    torso.add(head);
+
+    // Visor
+    const visorGeo = new THREE.BoxGeometry(0.2, 0.08, 0.05);
+    const visorMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+    const visor = new THREE.Mesh(visorGeo, visorMat);
+    visor.position.set(0, 0.02, 0.16);
+    head.add(visor);
+
+    // 3. Limbs (Pivoted)
+
+    // Left Arm
+    const lArmPivot = new THREE.Group();
+    lArmPivot.position.set(-0.35, 0.3, 0); // Shoulder pos relative to torso
+    torso.add(lArmPivot);
+    const lArm = createLimb(0.15, 0.6, 0.15, cyberColor);
+    lArm.position.y = -0.25; // Offset so pivot is at top
+    lArmPivot.add(lArm);
+    root.userData.lArm = lArmPivot;
+
+    // Right Arm
+    const rArmPivot = new THREE.Group();
+    rArmPivot.position.set(0.35, 0.3, 0);
+    torso.add(rArmPivot);
+    const rArm = createLimb(0.15, 0.6, 0.15, cyberColor);
+    rArm.position.y = -0.25;
+    rArmPivot.add(rArm);
+    root.userData.rArm = rArmPivot;
+
+    // Left Leg
+    const lLegPivot = new THREE.Group();
+    lLegPivot.position.set(-0.15, -0.35, 0); // Hip pos relative to torso
+    torso.add(lLegPivot);
+    const lLeg = createLimb(0.18, 0.7, 0.18, cyberColor);
+    lLeg.position.y = -0.35;
+    lLegPivot.add(lLeg);
+    root.userData.lLeg = lLegPivot;
+
+    // Right Leg
+    const rLegPivot = new THREE.Group();
+    rLegPivot.position.set(0.15, -0.35, 0);
+    torso.add(rLegPivot);
+    const rLeg = createLimb(0.18, 0.7, 0.18, cyberColor);
+    rLeg.position.y = -0.35;
+    rLegPivot.add(rLeg);
+    root.userData.rLeg = rLegPivot;
+
+    root.userData.torso = torso;
+
+    return root;
 }
 
 export function updateDeviceState(status) {
-    const mesh = getOrCreateDeviceMesh(status.deviceId, "UNKNOWN"); // Type should ideally come from status or registry
+    if (!deviceMeshes[status.deviceId]) {
+        // Init new avatar
+        const mesh = createCyberAvatar();
+        scene.add(mesh);
+        deviceMeshes[status.deviceId] = mesh;
 
-    if (status.sensorData) {
-        const data = status.sensorData;
-
-        // 1. Sync Rotation
-        if (data.qW !== undefined) {
-            // Android Rot Vector is usually (x, y, z, w) where w is scalar
-            const quat = new THREE.Quaternion(data.qX, data.qY, data.qZ, data.qW);
-            mesh.quaternion.slerp(quat, 0.5); // Smooth interpolation
+        // Arrange in circle if multiple? Or just center for now.
+        // If it's the first one, put at 0,0,0
+        if (Object.keys(deviceMeshes).length > 1) {
+            mesh.position.x = 2; // Offset simple
         }
+    }
 
-        // 2. Visual Cues from Posture
-        if (data.posture) {
-            const mat = mesh.material;
-            switch (data.posture) {
-                case 'FLAT_FACE_UP':
-                    mat.emissive.setHex(0x0044aa); // Blue Calc
-                    break;
-                case 'HANDHELD_TIILTED':
-                    mat.emissive.setHex(0xaa4400); // Orange Active
-                    break;
-                case 'UPRIGHT_PORTRAIT':
-                    mat.emissive.setHex(0x00aa44); // Green Vertical
-                    break;
-                default:
-                    mat.emissive.setHex(0x222222); // Dim
-            }
-        }
+    const avatar = deviceMeshes[status.deviceId];
+
+    // Handle Posture / IK
+    if (status.extras && status.extras.human_ik) {
+        animatePosture(avatar, status.extras.human_ik);
+    }
+}
+
+function animatePosture(avatar, state) {
+    const { lArm, rArm, lLeg, rLeg, torso } = avatar.userData;
+
+    // Smooth transitions would require lerping using delta time, 
+    // for now we set rotation directly for instant feedback.
+
+    if (state === "SLEEPING" || state === "FLAT_FACE_UP") {
+        // Laying down
+        avatar.rotation.x = -Math.PI / 2;
+        avatar.position.y = 0.3;
+
+        // Arms relaxed
+        lArm.rotation.x = -0.2;
+        rArm.rotation.x = -0.2;
+        lLeg.rotation.x = 0;
+        rLeg.rotation.x = 0;
+    }
+    else if (state === "SITTING" || state === "UPRIGHT_PORTRAIT") {
+        // Sitting
+        avatar.rotation.x = 0;
+        avatar.position.y = 0;
+
+        torso.position.y = 1.0;
+
+        // Hips bend
+        lLeg.rotation.x = -Math.PI / 2;
+        rLeg.rotation.x = -Math.PI / 2;
+
+        // Knees bend (if we had knees, but we assume simple stick legs for now or add knee pivot)
+        // With simple boxes, legs stick out forward.
+
+        // Arms
+        lArm.rotation.x = 0;
+        rArm.rotation.x = 0;
+    }
+    else {
+        // Standing / Interacting
+        avatar.rotation.x = 0;
+        avatar.position.y = 0;
+
+        lLeg.rotation.x = 0;
+        rLeg.rotation.x = 0;
+
+        // Idle Animation
+        const time = Date.now() * 0.002;
+        lArm.rotation.x = Math.sin(time) * 0.1;
+        rArm.rotation.x = -Math.sin(time) * 0.1;
     }
 }
 
@@ -144,6 +230,5 @@ function onWindowResize() {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    // renderer.render(scene, camera); // Use composer instead
     composer.render();
 }

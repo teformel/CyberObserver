@@ -2,23 +2,25 @@ version: '3.8'
 
 services:
   app:
-    # 使用微软官方优化的 Java 21 镜像 (JDK 21 是目前的 LTS，性能最好，适合新项目)
-    image: mcr.microsoft.com/devcontainers/java:1-21-bullseye
+    # Use Java 17 to match pom.xml
+    image: mcr.microsoft.com/devcontainers/java:1-17-bullseye
     volumes:
-      # 将当前项目根目录挂载到容器内的 /workspace
+      # Mount workspace
       - ../:/workspace:cached
+      # Mount local Maven repository to persist dependencies and avoid re-downloading
+      - ~/.m2:/home/vscode/.m2:cached
     
-    # 保持容器运行
+    # Keep container running
     command: /bin/sh -c "while sleep 1000; do :; done"
     
-    # 网络配置
-    # network_mode: service:db # 如果未来启用 db 服务，允许直接访问 localhost
+    # Network config
+    # network_mode: service:db 
 
-    # 如果你需要从容器内访问宿主机的服务（比如测试宿主机的某个端口）
+    # Access host services
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # --- 预留位置：未来如果你需要数据库或消息队列，解开下面注释即可 ---
+  # --- Database & Redis placeholders (commented out) ---
   # db:
   #   image: postgres:latest
   #   restart: unless-stopped

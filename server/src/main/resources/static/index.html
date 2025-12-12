@@ -64,7 +64,7 @@
 
     <!-- Main Logic -->
     <script type="module">
-        import { initScene, updateDeviceState } from './js/scene.js';
+        import { initScene, updateDeviceState } from './js/scene.js?v=2';
 
         // --- i18n System ---
         const translations = {
@@ -220,7 +220,8 @@
                 </div>
                 <div class="bar-container"><div class="bar-fill" style="width: ${memPercent}%"></div></div>
                 <div class="metric-row" style="margin-top:5px; color: #888;">
-                    <span>${t.app}: ${status.activeApp.substring(0, 20)}...</span>
+                    <span>${t.app}: <span class="text-truncate" title="${status.activeApp}">${status.activeApp}</span></span>
+
                 </div>
             `;
 

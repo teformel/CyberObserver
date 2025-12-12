@@ -68,15 +68,30 @@ public class CyberPC {
             
             logger.info("Connecting to {}...", SERVER_URI);
             client.connectBlocking(5, TimeUnit.SECONDS);
+            
+            // UI Init (Swing needs valid Display or Headless mode)
+            try {
+                // If headless, this will log warning and skip
+                com.cyber.pc.ui.CyberPCTray.init();
+            } catch (Exception e) {
+                logger.warn("UI Init failed (likely headless): {}", e.getMessage());
+            }
 
             // Reporting Loop
             ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
             executor.scheduleAtFixedRate(() -> {
                 if (client.isOpen()) {
+                    boolean privacy = com.cyber.pc.config.CyberPCConfig.getInstance().isPrivacyMode();
+                    
                     DeviceStatus status = monitor.captureStatus(DEVICE_ID);
+                    
+                    if (privacy) {
+                         status.setActiveApp("*** PROTECTED ***");
+                         // Mask other sensitive fields if any
+                    }
+
                     CyberMessage msg = new CyberMessage(CyberMessage.Type.STATUS_UPDATE, gson.toJson(status));
                     client.send(gson.toJson(msg));
-                    // logger.debug("Sent Heartbeat"); // too verbose
                 }
             }, 1, 1, TimeUnit.SECONDS);
             

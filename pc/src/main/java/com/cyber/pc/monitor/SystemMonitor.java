@@ -46,23 +46,16 @@ public class SystemMonitor {
             status.setBatteryLevel(1.0); // Desktop assumed 100%
         }
 
-        // Active Window (Topmost)
-        // Note: OSHI getDesktopWindows is heavy, used sparingly or assuming simple active window check
-        // For efficiency in this loop, we might just get the foreground process if possible, 
-        // or just return "Running"
+        // Active Window (Real JNA)
         status.setActiveApp(getActiveWindowTitle());
 
-        // Dummy Sensor Data for PC (could be mouse pos mapped to movement)
+        // Dummy Sensor Data for PC (still needed for protocol)
         status.setSensorData(new SensorData(0, 0, 0, 1)); 
 
         return status;
     }
 
     private String getActiveWindowTitle() {
-        // Cross-platform 'Active Window' is tricky without JNA platform specific calls.
-        // OSHI provides a listing, let's try to find the one with focus/z-order if possible,
-        // but OSHI 6.x implies fetching all windows.
-        // For simplicity in this demo, we'll return the OS Name + Uptime
-        return os.getFamily() + " Uptime: " + os.getSystemUptime() + "s";
+        return NativeUtils.getActiveWindowTitle();
     }
 }

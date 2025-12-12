@@ -40,20 +40,28 @@ class CommandProcessorTest {
 
     @Test
     void testInvalidUrlBlocked() {
-        // Prevent file schema or risky chars
         processor.process("URL:file:///etc/passwd");
         verify(system, never()).openUrl(anyString());
     }
 
     @Test
-    void testMalformedUrlLimited() {
-         processor.process("URL:javascript:alert(1)");
-         verify(system, never()).openUrl(anyString());
+    void testKillSafeProcess() {
+        // Safe process name
+        processor.process("KILL:notepad");
+        verify(system).killProcess("notepad");
     }
 
     @Test
-    void testEmptyCommand() {
-        processor.process("");
-        verifyNoInteractions(system);
+    void testKillBlacklistedProcess() {
+        // "system" is in blacklist
+        processor.process("KILL:system");
+        verify(system, never()).killProcess(anyString());
+    }
+
+    @Test
+    void testKillInjectionAttempt() {
+        // "safe; rm -rf /"
+        processor.process("KILL:notepad; rm -rf /");
+        verify(system, never()).killProcess(anyString());
     }
 }

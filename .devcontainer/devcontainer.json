@@ -3,6 +3,17 @@
     "dockerComposeFile": "docker-compose.yml",
     "service": "app",
     "workspaceFolder": "/workspace",
+    "features": {
+        "ghcr.io/devcontainers/features/java:1": {
+            "version": "17",
+            "installMaven": "true",
+            "installGradle": "false",
+            "jdkDistro": "ms"
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts"
+        }
+    },
     // 这里的设置会应用到容器内的 VS Code
     "customizations": {
         "vscode": {
@@ -34,8 +45,7 @@
         5005
     ],
     // 容器创建后执行的命令
-    // 这里我们更新一下包管理器，并安装 nodejs (前端构建可能需要，即使你用 JSP，管理 Three.js 库也建议用 npm)
-    "postCreateCommand": "sudo apt-get update && sudo apt-get install -y nodejs npm",
-    // 也就是使用 non-root 用户，提升安全性，避免文件权限问题
+    // 这里我们使用 features 安装了 nodejs，所以 postCreateCommand 可以简化或做其他 setup
+    "postCreateCommand": "mvn clean install -DskipTests", // 可选：自动构建
     "remoteUser": "vscode"
 }

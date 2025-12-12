@@ -141,4 +141,13 @@ body {
     100% { opacity: 1; }
 }
 
-.blink { animation: blink 1s infinite; }
+
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px; /* Adjust as needed for card width */
+    display: inline-block;
+    vertical-align: bottom;
+}
+

@@ -10,8 +10,9 @@ const deviceMeshes = {}; // Map<deviceId, Mesh>
 export function initScene(container) {
     // 1. Scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x020205);
-    scene.fog = new THREE.FogExp2(0x020205, 0.02);
+    // scene.background = new THREE.Color(0x020205); // Removed for transparency
+    scene.background = null;
+    scene.fog = new THREE.FogExp2(0xffffff, 0.02); // Light fog for light theme
 
     // 2. Camera
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -27,8 +28,8 @@ export function initScene(container) {
     // 4. Post-Processing (Bloom)
     const renderScene = new RenderPass(scene, camera);
     const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-    bloomPass.threshold = 0.1;
-    bloomPass.strength = 1.2; // Intense glow
+    bloomPass.threshold = 0.2;
+    bloomPass.strength = 0.6; // Reduced glow for light theme
     bloomPass.radius = 0.5;
 
     composer = new EffectComposer(renderer);
@@ -52,8 +53,8 @@ export function initScene(container) {
 }
 
 function addEnvironment() {
-    // Grid (Tron style)
-    const gridHelper = new THREE.GridHelper(50, 50, 0x004400, 0x001100);
+    // Grid (White/Light style)
+    const gridHelper = new THREE.GridHelper(50, 50, 0x888888, 0xcccccc);
     scene.add(gridHelper);
 
     // Ambient Light

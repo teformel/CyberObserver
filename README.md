@@ -52,9 +52,9 @@
 
 ```mermaid
 graph TD
-    User[Web Dashboard (Three.js)] <-->|WebSocket| Server[CyberServer (Spring Boot)]
-    PC[CyberPC (Java/OSHI)] -->|WebSocket| Server
-    Mobile[Android (Sensors)] -->|WebSocket| Server
+    User["Web Dashboard (Three.js)"] <-->|WebSocket| Server["CyberServer (Spring Boot)"]
+    PC["CyberPC (Java/OSHI)"] -->|WebSocket| Server
+    Mobile["Android (Sensors)"] -->|WebSocket| Server
 ```
 
 ---

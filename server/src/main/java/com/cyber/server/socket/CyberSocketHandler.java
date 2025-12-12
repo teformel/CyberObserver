@@ -9,6 +9,8 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import com.cyber.server.service.InferenceService;
+import com.cyber.common.model.DeviceStatus;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -17,10 +19,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class CyberSocketHandler extends TextWebSocketHandler {
 
     private final Gson gson = new Gson();
+    private final InferenceService inferenceService;
+    
     // Validated sessions
     private final ConcurrentHashMap<String, DeviceIdentity> deviceMap = new ConcurrentHashMap<>();
     // All open sessions
     private final CopyOnWriteArrayList<WebSocketSession> sessions = new CopyOnWriteArrayList<>();
+
+    public CyberSocketHandler(InferenceService inferenceService) {
+        this.inferenceService = inferenceService;
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -56,10 +64,16 @@ public class CyberSocketHandler extends TextWebSocketHandler {
             } else if (msg.getType() == CyberMessage.Type.STATUS_UPDATE) {
                 // 2. Security: Ensure authenticated before broadcasting
                 if (!deviceMap.containsKey(session.getId())) {
-                    // Fail silently or close
                     return;
                 }
-                broadcast(payload);
+                
+                // 3. Intelligence: Infer Posture
+                DeviceStatus status = gson.fromJson(msg.getPayloadJson(), DeviceStatus.class);
+                inferenceService.inferPosture(status);
+                
+                // Re-wrap and broadcast
+                msg.setPayloadJson(gson.toJson(status));
+                broadcast(gson.toJson(msg));
             }
         } catch (Exception e) {
             System.err.println("Error processing Msg: " + e.getMessage());

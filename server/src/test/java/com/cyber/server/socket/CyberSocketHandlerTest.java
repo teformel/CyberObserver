@@ -11,6 +11,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import com.cyber.server.service.InferenceService;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -20,13 +21,18 @@ class CyberSocketHandlerTest {
     private CyberSocketHandler handler;
     private final Gson gson = new Gson();
 
+
+
     @Mock
     private WebSocketSession session;
+    
+    @Mock
+    private InferenceService inferenceService; // Mock
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        handler = new CyberSocketHandler();
+        handler = new CyberSocketHandler(inferenceService); // Inject Mock
         when(session.getId()).thenReturn("s1");
         when(session.isOpen()).thenReturn(true);
     }

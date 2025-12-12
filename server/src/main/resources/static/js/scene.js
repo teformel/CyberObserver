@@ -105,12 +105,31 @@ export function updateDeviceState(status) {
     const mesh = getOrCreateDeviceMesh(status.deviceId, "UNKNOWN"); // Type should ideally come from status or registry
 
     if (status.sensorData) {
-        const q = status.sensorData;
-        // Check if valid quaternion
-        if (q.qW !== undefined) {
-            const quat = new THREE.Quaternion(q.qX, q.qY, q.qZ, q.qW);
-            // Smooth lerp could go here
-            mesh.setRotationFromQuaternion(quat);
+        const data = status.sensorData;
+
+        // 1. Sync Rotation
+        if (data.qW !== undefined) {
+            // Android Rot Vector is usually (x, y, z, w) where w is scalar
+            const quat = new THREE.Quaternion(data.qX, data.qY, data.qZ, data.qW);
+            mesh.quaternion.slerp(quat, 0.5); // Smooth interpolation
+        }
+
+        // 2. Visual Cues from Posture
+        if (data.posture) {
+            const mat = mesh.material;
+            switch (data.posture) {
+                case 'FLAT_FACE_UP':
+                    mat.emissive.setHex(0x0044aa); // Blue Calc
+                    break;
+                case 'HANDHELD_TIILTED':
+                    mat.emissive.setHex(0xaa4400); // Orange Active
+                    break;
+                case 'UPRIGHT_PORTRAIT':
+                    mat.emissive.setHex(0x00aa44); // Green Vertical
+                    break;
+                default:
+                    mat.emissive.setHex(0x222222); // Dim
+            }
         }
     }
 }
